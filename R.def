@@ -1,0 +1,42 @@
+Bootstrap: docker
+From: rocker/r-ver:4.4.1
+
+%labels
+    Author keerti
+    Purpose "R environment for QIIME2 downstream reporting (pipeline_report.Rmd)"
+    R_Version 4.4.1
+
+%post
+    apt-get update && apt-get install -y --no-install-recommends \
+        libcurl4-openssl-dev \
+        libssl-dev \
+        libxml2-dev \
+        libfontconfig1-dev \
+        libharfbuzz-dev \
+        libfribidi-dev \
+        libfreetype6-dev \
+        libpng-dev \
+        libtiff5-dev \
+        libjpeg-dev \
+        libuv1-dev \
+        git \
+        pandoc \
+        && rm -rf /var/lib/apt/lists/*
+
+    # Only what pipeline_report.Rmd actually uses:
+    # dplyr, tidyr, readr, stringr, ggplot2, plotly, DT, plus rmarkdown/knitr
+    # to render it. Deliberately NOT installing the full 'tidyverse' metapackage
+    # or Bioconductor packages (phyloseq/DESeq2/ANCOMBC/qiime2R) since the Rmd
+    # parses qza/qzv archives directly and does not call any of them - and pulling
+    # them in drags in a much larger, more fragile dependency tree for no benefit.
+    R -e "install.packages(c('dplyr','tidyr','readr','stringr','ggplot2','plotly','DT','rmarkdown','knitr','kableExtra'), repos='https://cloud.r-project.org')"
+
+    # Verify critical packages actually installed - fail the build loudly if not
+    R -e "pkgs <- c('dplyr','tidyr','readr','stringr','ggplot2','plotly','DT','rmarkdown','knitr','kableExtra'); missing <- pkgs[!sapply(pkgs, requireNamespace, quietly=TRUE)]; if (length(missing) > 0) stop('Missing packages after install: ', paste(missing, collapse=', ')) else cat('All required packages verified present.\n')"
+
+%environment
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+
+%runscript
+    exec R "$@"

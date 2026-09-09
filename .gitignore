@@ -1,0 +1,39 @@
+# Raw sequencing data
+raw_data/
+*.fastq
+*.fastq.gz
+*.fq
+*.fq.gz
+
+#Metadata
+metadata/
+
+# Nextflow generated files
+work/
+.nextflow/
+.nextflow.log*
+.nextflow.cache/
+
+# Generated analysis results
+results/
+fastp_test/
+fulldatatsv/
+
+# QIIME 2 artifacts / visualizations
+*.qza
+*.qzv
+*.biom
+
+# R environment / containers
+R.sif
+qiime_home/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+.RData
+.Rhistory

@@ -1,0 +1,93 @@
+---
+
+title: "16S rRNA Gut Microbiome Test Report"
+author: "Automated QIIME 2 + R Analysis"
+date: "`r Sys.Date()`"
+output:
+html_document:
+toc: true
+toc_depth: 3
+self_contained: true
+theme: readable
+---------------
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 9,
+  fig.height = 6
+)
+
+project_root <- "/SCRATCH/interns/keerti/Pipeline/16s_Amplicon"
+```
+
+# 1. Project Information
+
+The analysis was performed using QIIME 2, Nextflow and R.
+
+```{r project-info}
+cat("Project directory:", project_root)
+```
+
+# 2. Results Directory
+
+```{r results}
+results_dir <- file.path(project_root, "results")
+
+cat("Results directory:", results_dir)
+```
+
+# 3. QIIME 2 Visualizations
+
+```{r qzv-files}
+qzv_files <- list.files(
+  results_dir,
+  pattern = "\\.qzv$",
+  recursive = TRUE,
+  full.names = TRUE
+)
+
+data.frame(
+  File = basename(qzv_files),
+  Path = qzv_files
+)
+```
+
+# 4. QIIME 2 Artifacts
+
+```{r qza-files}
+qza_files <- list.files(
+  results_dir,
+  pattern = "\\.qza$",
+  recursive = TRUE,
+  full.names = TRUE
+)
+
+data.frame(
+  File = basename(qza_files),
+  Path = qza_files
+)
+```
+
+# 5. Simple Plot
+
+```{r simple-plot}
+x <- 1:10
+y <- x^2
+
+plot(
+  x,
+  y,
+  main = "Example R Markdown Plot",
+  xlab = "X",
+  ylab = "X squared"
+)
+```
+
+# 6. Session Information
+
+```{r session}
+sessionInfo()
+```
