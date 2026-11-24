@@ -1,376 +1,135 @@
 # 16S Amplicon Nextflow Pipeline
 
-A reproducible **16S rRNA amplicon sequencing analysis pipeline** implemented using **Nextflow** and **QIIME 2**.
+A reproducible **16S rRNA amplicon analysis pipeline** built with **Nextflow (DSL2)** and **QIIME 2**.
 
-The pipeline automates quality control, read preprocessing, ASV generation, phylogenetic analysis, taxonomic classification, diversity analysis, differential abundance analysis, and automated R Markdown reporting.
+**In one sentence:** paired-end 16S sequencing reads go in; quality-checked ASVs, taxonomy, diversity results and an automated HTML report come out.
 
----
-
-## Overview
-
-This workflow is designed for bacterial 16S rRNA amplicon sequencing data and provides an end-to-end analysis framework from raw paired-end FASTQ files to an automated analysis report.
-
-The workflow was developed using a human gut microbiome 16S dataset from NCBI BioProject **PRJNA601994**. The dataset contains paired-end amplicon sequencing reads generated using an Illumina MiSeq platform. The study used the **V4 variable region of the 16S rRNA gene**.
-
-### Study dataset
-
-| Property            | Description                  |
-| ------------------- | ---------------------------- |
-| BioProject          | PRJNA601994                  |
-| Assay type          | 16S amplicon                 |
-| Sequencing platform | Illumina MiSeq               |
-| Library layout      | Paired-end                   |
-| Sample type         | Stool                        |
-| Target              | Bacterial 16S rRNA V4 region |
-| Organism            | Human gut metagenome         |
-| SRA Study           | SRP242624                    |
-
-The original study included **840 individuals**, consisting of 524 Parkinson's disease samples and 316 healthy controls.
+**Tools:** Nextflow · QIIME 2 · DADA2 · FastQC · fastp · R Markdown · Singularity/Apptainer
 
 ---
+
+## What it does
+
+- Checks read quality (FastQC) and cleans reads (fastp)
+- Builds amplicon sequence variants (ASVs) with DADA2
+- Builds a phylogenetic tree and assigns taxonomy (SILVA classifier)
+- Calculates alpha and beta diversity, rarefaction curves and group statistics
+- Tests for differentially abundant taxa
+- Produces one HTML report that brings the results together
 
 ## Workflow
 
-```text
-Raw paired-end FASTQ
-        │
-        ▼
-      FastQC
-        │
-        ▼
-      fastp
-        │
-        ▼
-   Quality Control
-        │
-        ▼
-   QIIME 2 Import
-        │
-        ▼
-      DADA2
-        │
-        ├── Feature table
-        ├── Representative sequences
-        └── Denoising statistics
-        │
-        ▼
- Phylogenetic Analysis
-        │
-        ▼
- Taxonomic Classification
-        │
-        ▼
- Diversity Analysis
-        │
-        ├── Alpha diversity
-        ├── Beta diversity
-        ├── Shannon
-        ├── Observed Features
-        ├── Pielou's Evenness
-        ├── Faith's PD
-        ├── Bray-Curtis
-        ├── Jaccard
-        ├── Unweighted UniFrac
-        └── Weighted UniFrac
-        │
-        ▼
- Differential Abundance
-        │
-        ▼
- Automated R Markdown Report
+```mermaid
+flowchart LR
+    A[Raw paired-end<br>FASTQ] --> B[FastQC]
+    B --> C[fastp]
+    C --> D[QIIME 2<br>import]
+    D --> E[DADA2<br>ASVs]
+    E --> F[Phylogenetic<br>tree]
+    E --> G[Taxonomy]
+    F --> H[Alpha + beta<br>diversity]
+    G --> I[Differential<br>abundance]
+    H --> J[R Markdown<br>report]
+    I --> J
 ```
 
----
+## Pipeline modules
 
-## Pipeline Modules
+| Module | Function |
+|---|---|
+| `fastqc.nf` | FASTQ quality assessment |
+| `fastp.nf` | Read quality filtering and preprocessing |
+| `01_demultiplexing.nf` | Import sequencing data into QIIME 2 |
+| `02_denoising.nf` | DADA2 denoising and ASV generation |
+| `03_phylogenetic_tree.nf` | Alignment and phylogenetic tree (MAFFT + FastTree) |
+| `04_taxonomy.nf` | Taxonomic classification |
+| `05_diversity.nf` | Core alpha and beta diversity metrics |
+| `06_alpha_group_significance.nf` | Alpha diversity group comparisons |
+| `07_alpha_rarefaction.nf` | Alpha rarefaction curves |
+| `08_differential_abundance.nf` | Differential abundance analysis |
+| `10_r_report.nf` | Automated R Markdown report |
 
-The workflow is organized into independent Nextflow modules.
+## Example dataset
 
-| Module                           | Function                                                       |
-| -------------------------------- | -------------------------------------------------------------- |
-| `01_demultiplexing.nf`           | Import/demultiplex sequencing data                             |
-| `02_denoising.nf`                | DADA2 denoising and ASV generation                             |
-| `03_phylogenetic_tree.nf`        | Multiple sequence alignment and phylogenetic tree construction |
-| `04_taxonomy.nf`                 | Taxonomic classification                                       |
-| `05_diversity.nf`                | Core diversity analysis                                        |
-| `06_alpha_group_significance.nf` | Alpha diversity group significance                             |
-| `07_alpha_rarefaction.nf`        | Alpha rarefaction analysis                                     |
-| `08_differential_abundance.nf`   | Differential abundance analysis                                |
-| `10_r_report.nf`                 | Automated R Markdown report generation                         |
-| `fastqc.nf`                      | FASTQ quality assessment                                       |
-| `fastp.nf`                       | Read quality filtering and preprocessing                       |
+The workflow was developed on a public human gut microbiome dataset.
 
----
+| Property | Description |
+|---|---|
+| BioProject | PRJNA601994 (SRA study SRP242624) |
+| Assay | 16S rRNA amplicon, V4 region |
+| Platform | Illumina MiSeq, paired-end |
+| Sample type | Stool (human gut) |
+| Study size | 840 individuals: 524 Parkinson's disease, 316 healthy controls |
 
-## Quality Control
-
-The pipeline performs quality assessment before and after read preprocessing.
-
-### FastQC
-
-FastQC is used to inspect:
-
-* Per-base sequence quality
-* Read length
-* Per-sequence quality
-* Adapter contamination
-* Overrepresented sequences
-* GC content
-
-### fastp
-
-`fastp` is used for preprocessing and quality filtering of sequencing reads.
-
-The processed reads can subsequently be inspected again with FastQC to confirm improvement in read quality.
+On this dataset the analysis produced about 620 unique ASVs with an average length of about 252 bp, as expected for a V4 amplicon.
 
 ---
 
-## DADA2 Denoising
+## Quick start
 
-QIIME 2 DADA2 is used to process paired-end reads and generate **amplicon sequence variants (ASVs)**.
-
-The workflow includes:
-
-```text
-Input reads
-    ↓
-Quality filtering
-    ↓
-Denoising
-    ↓
-Paired-end merging
-    ↓
-Chimera removal
-    ↓
-ASV feature table
-    ↓
-Representative sequences
-```
-
-For the example dataset, the analysis generated approximately **620 unique ASVs**. The representative sequences had an average length of approximately **252 bp**, consistent with a V4 16S amplicon.
-
-Denoising statistics are retained to evaluate filtering, merging, and non-chimeric read retention.
-
----
-
-## Phylogenetic Analysis
-
-Representative sequences are aligned and used to construct a phylogenetic tree.
-
-The workflow uses the QIIME 2:
-
-```text
-qiime phylogeny align-to-tree-mafft-fasttree
-```
-
-The resulting phylogenetic tree is required for phylogenetic diversity metrics such as:
-
-* Faith's Phylogenetic Diversity
-* Unweighted UniFrac
-* Weighted UniFrac
-
----
-
-## Taxonomic Classification
-
-ASVs are classified using a pretrained QIIME 2 taxonomic classifier.
-
-The workflow can use reference databases such as **SILVA** or other compatible 16S reference databases.
-
-Taxonomic assignments can be summarized at different taxonomic levels:
-
-```text
-Kingdom
-  ↓
-Phylum
-  ↓
-Class
-  ↓
-Order
-  ↓
-Family
-  ↓
-Genus
-  ↓
-Species
-```
-
-For V4 16S data, the reference classifier should be compatible with the targeted region.
-
----
-
-## Diversity Analysis
-
-The pipeline performs both alpha and beta diversity analyses.
-
-### Alpha Diversity
-
-The workflow includes:
-
-* Observed Features
-* Shannon diversity
-* Pielou's Evenness
-* Faith's Phylogenetic Diversity
-
-### Beta Diversity
-
-The workflow includes:
-
-* Bray-Curtis
-* Jaccard
-* Unweighted UniFrac
-* Weighted UniFrac
-
-These analyses allow microbial community diversity and composition to be investigated across samples and metadata-defined groups.
-
----
-
-## Differential Abundance
-
-The pipeline includes a module for downstream differential abundance analysis.
-
-This can be used to investigate taxa whose abundance differs between predefined sample groups when the study design and sample size support statistical comparison.
-
----
-
-## Automated R Markdown Report
-
-The final stage of the workflow generates an automated report using **R Markdown**.
-
-The report integrates analysis outputs and visualizations into a single HTML report.
-
-The report can include:
-
-* Denoising statistics
-* Alpha diversity
-* Beta diversity
-* PCoA visualizations
-* Taxonomic composition
-* Genus-level abundance
-* Diversity group comparisons
-* Differential abundance results
-
-The reporting stage is implemented through:
-
-```text
-modules/10_r_report.nf
-```
-
-with templates stored under:
-
-```text
-templates/
-```
-
----
-
-## Repository Structure
-
-```text
-16s-Amplicon-Nextflow-Pipeline/
-│
-├── main.nf
-├── nextflow.config
-├── R.def
-├── .gitignore
-│
-├── modules/
-│   ├── 01_demultiplexing.nf
-│   ├── 02_denoising.nf
-│   ├── 03_phylogenetic_tree.nf
-│   ├── 04_taxonomy.nf
-│   ├── 05_diversity.nf
-│   ├── 06_alpha_group_significance.nf
-│   ├── 07_alpha_rarefaction.nf
-│   ├── 08_differential_abundance.nf
-│   ├── 10_r_report.nf
-│   ├── fastp.nf
-│   └── fastqc.nf
-│
-└── templates/
-    ├── Report.Rmd
-    ├── plots.R
-    └── test_report.Rmd
-```
-
-Large sequencing datasets, intermediate files, generated results, QIIME 2 artifacts, containers, and Nextflow work directories are excluded from version control.
-
----
-
-## Requirements
-
-The pipeline requires:
-
-* Nextflow
-* Singularity/Apptainer
-* QIIME 2
-* FastQC
-* fastp
-* R
-* R Markdown
-
-Containerized environments can be used to improve reproducibility.
-
----
-
-## Running the Pipeline
-
-**1. Clone the repository**
+**1. Get the code**
 
 ```bash
 git clone https://github.com/livolo/16s-Amplicon-Nextflow-Pipeline.git
 cd 16s-Amplicon-Nextflow-Pipeline
 ```
 
-**2. Prepare your inputs** (see [Input Data](#input-data))
+**2. Prepare your inputs**
 
-- `manifest.tsv`: sample IDs and FASTQ paths
-- `sample-metadata.tsv`: sample information (must include the column used for `--group_column`)
-- A pre-trained SILVA 138 classifier (`.qza`) for the V4 region
+- `manifest.tsv`: sample IDs and FASTQ paths (tab-separated)
+- `sample-metadata.tsv`: sample information, including the column used for group comparisons
+- A pre-trained QIIME 2 classifier (`.qza`) that matches your 16S region (the example uses SILVA 138, V4)
+- A QIIME 2 Singularity image (`.sif`) and an R image built from `R.def`
 
-**3. Run the workflow**
+Example `manifest.tsv`:
+
+```text
+sample-id	forward-absolute-filepath	reverse-absolute-filepath
+sample1	/path/to/sample1_1.fastq.gz	/path/to/sample1_2.fastq.gz
+sample2	/path/to/sample2_1.fastq.gz	/path/to/sample2_2.fastq.gz
+```
+
+**3. Run**
 
 ```bash
 nextflow run main.nf -profile singularity \
   --manifest metadata/manifest.tsv \
   --metadata metadata/sample-metadata.tsv \
   --classifier reference/silva-138-99-515-806-nb-classifier.qza \
+  --qiime_container /path/to/qiime2.sif \
+  --r_container /path/to/R.sif \
   --outdir results
 ```
 
-All other settings (DADA2 truncation lengths, sampling depth, group column) can be changed in `nextflow.config` or passed on the command line.
-
-**4. Optional**
+Useful extras:
 
 ```bash
-nextflow run main.nf -profile singularity -stub-run   # quick test without running tools
-nextflow run main.nf -profile singularity -resume     # continue an interrupted run
-```
----
-
-## Input Data
-
-The pipeline is designed for paired-end FASTQ data.
-
-Example naming convention:
-
-```text
-sample1_1.fastq.gz
-sample1_2.fastq.gz
-
-sample2_1.fastq.gz
-sample2_2.fastq.gz
+-resume      # continue an interrupted run
+-stub-run    # quick dry run without running the tools
 ```
 
-Raw sequencing data should be placed in the configured input directory.
+### Parameters
 
-Large raw datasets should **not** be committed to GitHub.
+All parameters have defaults in `nextflow.config` and can be changed on the command line.
+
+| Parameter | Meaning |
+|---|---|
+| `manifest`, `metadata` | Input sample list and sample information |
+| `classifier` | Pre-trained taxonomy classifier (`.qza`) |
+| `outdir` | Where results are written |
+| `trunc_len_f`, `trunc_len_r` | DADA2 truncation length of forward and reverse reads (defaults 145 and 130 suit the example dataset) |
+| `trim_left_f`, `trim_left_r` | Bases removed from the start of reads |
+| `sampling_depth` | Even sampling depth for core diversity metrics |
+| `max_rarefaction_depth` | Maximum depth for rarefaction curves |
+| `group_column` | Metadata column used for group comparisons (default `Health_State`) |
+| `qiime_container`, `r_container` | Paths to the Singularity images |
+| `singularity_opts` | Extra Singularity options, for example `--bind /data` |
+
+Choose `trunc_len_*` and `sampling_depth` from your own data: inspect the read quality plots and the denoising statistics first.
 
 ---
 
 ## Outputs
-
-The workflow generates analysis results including:
 
 ```text
 results/
@@ -380,81 +139,62 @@ results/
 ├── taxonomy/
 ├── diversity/
 ├── differential-abundance/
-└── r_report/
+└── r_report/          # final HTML report
 ```
 
-Typical QIIME 2 outputs include:
+The run also writes a Nextflow execution report, timeline and trace file to `results/`.
 
-* Feature tables
-* Representative sequences
-* Denoising statistics
-* Taxonomy results
-* Phylogenetic trees
-* Alpha diversity results
-* Beta diversity / PCoA results
-* Taxonomic visualizations
-* Statistical results
-* Final HTML report
+<!-- Remove this line and the closing line below once the images exist in docs/figures/
 
----
+## Example results
+
+Output from the example dataset.
+
+**Alpha diversity**
+
+![Alpha diversity](docs/figures/alpha_diversity.png)
+
+**Beta diversity (PCoA)**
+
+![PCoA](docs/figures/pcoa.png)
+
+**Taxonomic composition**
+
+![Taxonomic composition](docs/figures/taxa_barplot.png)
+
+Remove this line too -->
+
+## Repository structure
+
+```text
+.
+├── main.nf                # workflow entry point
+├── nextflow.config        # parameters and resources
+├── R.def                  # recipe for the R report container
+├── modules/               # one Nextflow module per analysis step
+└── templates/             # R Markdown report templates and plotting code
+```
+
+Raw reads, intermediate files, QIIME 2 artifacts, containers and Nextflow work directories are not stored in the repository.
+
+## Notes
+
+- **Study design:** group tests such as differential abundance, group significance and PERMANOVA are only meaningful when the sample size and design support them.
+- **16S resolution:** 16S amplicons give reliable genus-level profiles but not always species-level ones. Interpret species assignments with the classifier confidence and the targeted region in mind.
+- **Reference data:** the classifier must match the amplified 16S region.
 
 ## Reproducibility
 
-The pipeline uses **Nextflow DSL2** to organize individual analysis steps into modular processes.
+Nextflow keeps each step as a separate, versioned process, and the tools run inside containers, so the same inputs and parameters give the same results on another machine.
 
-Containerized software environments are used where applicable, allowing the computational environment to be separated from the host system.
+## Dataset reference
 
-The workflow is designed to support:
-
-```text
-Version-controlled pipeline
-          +
-Containerized software
-          +
-Configured parameters
-          +
-Automated execution
-          =
-Reproducible analysis
-```
-
----
-
-## Important Notes
-
-### Study design
-
-Statistical analyses such as differential abundance, group significance, and PERMANOVA should only be interpreted when the available sample size and experimental design support those comparisons.
-
-### 16S resolution
-
-16S amplicon sequencing provides taxonomic profiling but does not always provide reliable species-level resolution. Species-level assignments should therefore be interpreted according to classifier confidence and the targeted 16S region.
-
-### Generated files
-
-Raw reads, intermediate files, QIIME 2 artifacts, result directories, containers, and Nextflow work directories are intentionally excluded from this repository.
-
----
-
-## Dataset Reference
-
-The example dataset is associated with:
-
-**NCBI BioProject:** PRJNA601994
-
-**SRA Study:** SRP242624
-
-The dataset metadata identifies the assay as amplicon sequencing, with paired-end Illumina MiSeq reads and stool samples.
-
----
+NCBI BioProject **PRJNA601994** · SRA Study **SRP242624**. Dataset ownership and reuse follow the terms of the original data source and study.
 
 ## Author
 
-**Kirti Vishwakarma**
-
-GitHub: [@livolo](https://github.com/livolo)
-
----
+**Kirti Vishwakarma**, M.Sc. Bioinformatics
+[LinkedIn](https://www.linkedin.com/in/kirti-vishwakarma-b69bb9229/) · [GitHub](https://github.com/livolo)
 
 ## License
 
