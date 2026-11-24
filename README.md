@@ -315,37 +315,37 @@ Containerized environments can be used to improve reproducibility.
 
 ## Running the Pipeline
 
-Clone the repository:
+**1. Clone the repository**
 
 ```bash
 git clone https://github.com/livolo/16s-Amplicon-Nextflow-Pipeline.git
 cd 16s-Amplicon-Nextflow-Pipeline
 ```
 
-Review the configuration:
+**2. Prepare your inputs** (see [Input Data](#input-data))
+
+- `manifest.tsv`: sample IDs and FASTQ paths
+- `sample-metadata.tsv`: sample information (must include the column used for `--group_column`)
+- A pre-trained SILVA 138 classifier (`.qza`) for the V4 region
+
+**3. Run the workflow**
 
 ```bash
-cat nextflow.config
+nextflow run main.nf -profile singularity \
+  --manifest metadata/manifest.tsv \
+  --metadata metadata/sample-metadata.tsv \
+  --classifier reference/silva-138-99-515-806-nb-classifier.qza \
+  --outdir results
 ```
 
-Run the workflow using the configured Singularity profile:
+All other settings (DADA2 truncation lengths, sampling depth, group column) can be changed in `nextflow.config` or passed on the command line.
+
+**4. Optional**
 
 ```bash
-nextflow run main.nf -profile singularity
+nextflow run main.nf -profile singularity -stub-run   # quick test without running tools
+nextflow run main.nf -profile singularity -resume     # continue an interrupted run
 ```
-
-For a test/stub execution:
-
-```bash
-nextflow run main.nf -profile singularity -stub-run
-```
-
-Resume an interrupted or previously completed workflow:
-
-```bash
-nextflow run main.nf -profile singularity -resume
-```
-
 ---
 
 ## Input Data
