@@ -37,3 +37,4 @@ qiime_home/
 .DS_Store
 .RData
 .Rhistory
+local.config
