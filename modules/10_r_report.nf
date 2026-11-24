@@ -19,7 +19,7 @@ process R_REPORT {
 
     publishDir "${params.outdir}/r_report", mode: 'copy'
 
-    container '/SCRATCH/interns/keerti/Pipeline/16s_Amplicon/R.sif'
+    container params.r_container
 
     input:
     path results_dir

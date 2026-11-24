@@ -4,7 +4,7 @@ process FASTP {
 
     cpus 4
 
-    container '/COLD_STORAGE/software/tools/fastp/fastp.sif'
+    container params.fastp_container
 
     publishDir "${params.outdir}/fastp", mode: 'copy'
 
